@@ -158,7 +158,22 @@ fun addBombToArray(bomb: BombShell) {
 
 
 fun tick() {
-  for (bomb in allBombs) {
-    bomb.tick()
+  for ((i, bomb) in allBombs.withIndex()) {
+    println("BOMB IS ALIVE? ${bomb.isAlive()}")
+
+    if (bomb.isAlive()) {
+      bomb.tick()
+    }
+    else {
+      val newBombs = allBombs.toMutableList()
+      try {
+        newBombs.removeAt(i)
+      }
+      catch (e: java.lang.IndexOutOfBoundsException) {
+        continue
+      }
+
+      allBombs = newBombs.toTypedArray()
+    }
   }
 }

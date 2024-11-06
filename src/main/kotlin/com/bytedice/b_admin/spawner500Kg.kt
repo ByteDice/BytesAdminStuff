@@ -11,9 +11,9 @@ import net.minecraft.text.TextColor
 import java.awt.Color
 
 fun spawner500Kg() : ItemStack {
-  val spawnerItem: ItemStack = ItemStack(Items.AMETHYST_SHARD)
+  val spawnerItem = ItemStack(Items.AMETHYST_SHARD)
 
-  val nbt: NbtCompound = NbtCompound()
+  val nbt = NbtCompound()
   nbt.putByte("500kg", 1)
   val component: NbtComponent = NbtComponent.of(nbt)
 

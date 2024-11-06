@@ -33,10 +33,14 @@ fun spawnBomb(player: ServerPlayerEntity, world: ServerWorld) {
 
   val bomb = BombShell()
 
+  /*
   val dir = Vector2f(
     Random.create().nextBetween(0, 360).toFloat(),
     30.0f
   )
+  */
+
+  val dir = Vector2f(60.0f, 30.0f)
 
   bomb.spawn(world, hitResult.pos, dir)
 

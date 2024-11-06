@@ -55,6 +55,8 @@ class BombShell {
   )
 
   private var bombShellDisplayEntities: Array<BlockDisplayEntity> = emptyArray()
+  private var rot: Vector2d = Vector2d(0.0, 0.0)
+
   private var ticksUntilImpact: Int = 100
   private var speed: Double = 0.1
 
@@ -71,7 +73,11 @@ class BombShell {
 
       // part.offset = Vector3f(newOffset.x.toFloat(), newOffset.y.toFloat(), newOffset.z.toFloat())
 
-      bombShellDisplayEntities += spawnBlockDisplay(server, pos, rot, part)
+      val displayEntity = spawnBlockDisplay(server, pos, rot, part)
+
+      this.rot = Vector2d(displayEntity.pitch.toDouble(), displayEntity.yaw.toDouble())
+
+      bombShellDisplayEntities += displayEntity
     }
   }
 
@@ -83,17 +89,12 @@ class BombShell {
     // TODO: make this only repeat ticksUntilImpact times
 
     for (displayEntity in bombShellDisplayEntities) {
-      val upVecNorm = rotToUpVec(
-        Vector2d(
-          displayEntity.rotationClient.x.toDouble(),
-          displayEntity.rotationClient.y.toDouble()
-        )
-      )
+      val upVec = rotToUpVec(rot)
 
       val newPos = Vec3d(
-        upVecNorm.x * speed,
-        upVecNorm.y * speed,
-        upVecNorm.z * speed
+        upVec.x * speed,
+        upVec.y * speed,
+        upVec.z * speed
       )
 
       val nbt = NbtCompound().apply {
@@ -119,6 +120,30 @@ class BombShell {
       nbt.put("transformation", transformationNbt)
       displayEntity.readNbt(nbt)
 
+      println("upVec: $upVec    rot: $rot    currentPos: $currentPos    newPos: $newPos")
     }
+  }
+
+  fun isAlive() : Boolean {
+    for (displayEntity in bombShellDisplayEntities) {
+      if (!displayEntity.isAlive) {
+
+        for (displayEntity2 in bombShellDisplayEntities) {
+          try {
+            displayEntity2.kill()
+          }
+          catch (e: java.lang.IndexOutOfBoundsException) {
+            continue
+          }
+        }
+
+        println("ENTITY NOT ALIVE")
+        return false
+      }
+    }
+
+    println("ENTITY ALIVE")
+
+    return true
   }
 }
