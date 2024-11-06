@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "b_admin",
+  "version": "${version}",
+  "name": "Byte's Admin Stuff",
+  "description": "",
+  "authors": [],
+  "contact": {
+    "repo": "https://github.com/theod/BytesAdminStuff"
+  },
+  "license": "All-Rights-Reserved",
+  "icon": "assets/b_admin/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "server": [
+      "com.bytedice.b_admin.BytesAdminStuff"
+    ]
+  },
+  "mixins": [
+    "b_admin.mixins.json"
+  ],
+  "depends": {
+    "fabric-language-kotlin": ">=1.12.3+kotlin.2.0.21",
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
