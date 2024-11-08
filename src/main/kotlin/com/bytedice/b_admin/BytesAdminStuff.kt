@@ -38,8 +38,8 @@ class BytesAdminStuff : DedicatedServerModInitializer {
   override fun onInitializeServer() {
     BDAT_gamerules = gameRules()
 
-    ServerTickEvents.START_SERVER_TICK.register { server ->
-      tick(server.overworld)
+    ServerTickEvents.START_SERVER_TICK.register { _ ->
+      tick()
     }
 
     CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
@@ -59,11 +59,18 @@ class BytesAdminStuff : DedicatedServerModInitializer {
 }
 
 
-fun tick(server: ServerWorld) {
+fun tick() {
+  handleBombArray()
+}
+
+
+
+
+fun handleBombArray() {
   for ((i, bomb) in allBombs.withIndex()) {
 
     if (bomb.isAlive()) {
-      bomb.tick(server)
+      bomb.tick()
     }
     else {
       val newBombs = allBombs.toMutableList()
@@ -164,6 +171,8 @@ fun addBombToArray(bomb: BombShell) {
 }
 
 
+// TODO: fix this math thingy, it spawns weirdly rotated rn
+
 fun spawnDebugDisplay(server: ServerWorld, start: Vec3d, end: Vec3d, width: Float = 0.3f, blockType: String = "minecraft:red_stained_glass") : BlockDisplayEntity {
   val dir = end.subtract(start)
   val dist = dir.length()
@@ -178,8 +187,6 @@ fun spawnDebugDisplay(server: ServerWorld, start: Vec3d, end: Vec3d, width: Floa
     scale,
     blockType
   )
-
-  println("pos: $start    scale: $scale")
 
   return spawnBlockDisplay(server, start, Vector2f(yaw, pitch), displayProperties)
 }

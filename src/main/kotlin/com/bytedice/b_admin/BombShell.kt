@@ -12,6 +12,8 @@ import org.joml.Vector2d
 import org.joml.Vector2f
 import org.joml.Vector3f
 import org.joml.Vector4f
+import kotlin.math.cos
+import kotlin.math.sin
 
 
 class BombShell {
@@ -61,12 +63,10 @@ class BombShell {
   private var ticksUntilImpact: Int = 100
   private var speed: Double = 0.1
 
-  private var debugEntity: BlockDisplayEntity? = null
-
 
   fun spawn(server: ServerWorld, pos: Vec3d, rot: Vector2f) {
     this.rot = Vector2d(rot.x.toDouble(), rot.y.toDouble())
-    this.upVec = rotToUpVec(Vector2d(rot.x.toDouble(), rot.y.toDouble()), server)
+    this.upVec = rotToUpVec(Vector2d(rot.x.toDouble(), rot.y.toDouble()))
 
     for (part in parts) {
       val newOffset = Vec3d(
@@ -85,13 +85,14 @@ class BombShell {
     val debugEnd = Vec3d(
       pos.x + upVec.x * 2,
       pos.y + upVec.y * 2,
-      pos.z + -upVec.z * 2
+      pos.z + upVec.z * 2
     )
 
     this.bombShellDisplayEntities += spawnDebugDisplay(server, pos, debugEnd)
   }
 
-  fun tick(server: ServerWorld) {
+
+  fun tick() {
     if (this.bombShellDisplayEntities.isEmpty()) {
       return
     }
@@ -99,14 +100,13 @@ class BombShell {
     // TODO: make this only repeat ticksUntilImpact times
 
     for (displayEntity in this.bombShellDisplayEntities) {
-      val upVec = rotToUpVec(this.rot, server)
+      val upVec = rotToUpVec(this.rot)
 
       val newPos = Vec3d(
         upVec.x * speed,
-        upVec.y * -speed,
+        upVec.y * speed,
         upVec.z * speed
       )
-
 
       writeNbt(displayEntity, newPos)
 
@@ -162,21 +162,15 @@ class BombShell {
   }
 
 
-  fun rotToUpVec(rotDegrees: Vector2d, server: ServerWorld): Vec3d {
-    val radians = Vector2d(
-      Math.toRadians(rotDegrees.x),
-      Math.toRadians(rotDegrees.y)
-    )
+  fun rotToUpVec(rotDegrees: Vector2d): Vec3d {
+    val yaw = Math.toRadians(rotDegrees.x)
+    val pitch = Math.toRadians(rotDegrees.y)
 
-    /*
     val upVec = Vec3d(
-      sin(radians.y),
-      cos(radians.x),
-      cos(radians.y) * sin(radians.x)
+      -sin(yaw) * cos(pitch),
+      sin(pitch),
+      cos(yaw) * cos(pitch)
     )
-    */
-
-    val upVec = getUpVecByEquationIndex(server.gameRules.getInt(BDAT_gamerules?.upVecEquationIndex), radians)
 
     return upVec.normalize()
   }
