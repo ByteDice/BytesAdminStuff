@@ -1,11 +1,11 @@
 package com.bytedice.b_admin
 
+import net.minecraft.entity.decoration.DisplayEntity
 import net.minecraft.entity.decoration.DisplayEntity.BlockDisplayEntity
 import net.minecraft.nbt.NbtCompound
 import net.minecraft.nbt.NbtElement
 import net.minecraft.nbt.NbtFloat
 import net.minecraft.nbt.NbtList
-import net.minecraft.nbt.NbtType
 import net.minecraft.server.world.ServerWorld
 import net.minecraft.util.math.Vec3d
 import org.joml.Vector2d
@@ -56,79 +56,96 @@ class BombShell {
 
   private var bombShellDisplayEntities: Array<BlockDisplayEntity> = emptyArray()
   private var rot: Vector2d = Vector2d(0.0, 0.0)
+  private var upVec: Vec3d = Vec3d(0.0, 0.0, 0.0)
 
   private var ticksUntilImpact: Int = 100
   private var speed: Double = 0.1
 
+  private var debugEntity: BlockDisplayEntity? = null
+
 
   fun spawn(server: ServerWorld, pos: Vec3d, rot: Vector2f) {
-    for (part in parts) {
-      val upVec = rotToUpVec(Vector2d(rot.x.toDouble(), rot.y.toDouble()))
+    this.rot = Vector2d(rot.x.toDouble(), rot.y.toDouble())
+    this.upVec = rotToUpVec(Vector2d(rot.x.toDouble(), rot.y.toDouble()), server)
 
+    for (part in parts) {
       val newOffset = Vec3d(
-        part.offset.x + (upVec.x * (speed * ticksUntilImpact)),
-        part.offset.y + (upVec.y * (speed * ticksUntilImpact)),
-        part.offset.z + (upVec.z * (speed * ticksUntilImpact))
+        part.offset.x + upVec.x * (speed * ticksUntilImpact),
+        part.offset.y + upVec.y * (speed * ticksUntilImpact),
+        part.offset.z + upVec.z * (speed * ticksUntilImpact)
       )
 
       // part.offset = Vector3f(newOffset.x.toFloat(), newOffset.y.toFloat(), newOffset.z.toFloat())
 
       val displayEntity = spawnBlockDisplay(server, pos, rot, part)
 
-      this.rot = Vector2d(displayEntity.pitch.toDouble(), displayEntity.yaw.toDouble())
-
-      bombShellDisplayEntities += displayEntity
+      this.bombShellDisplayEntities += displayEntity
     }
+
+    val debugEnd = Vec3d(
+      pos.x + upVec.x * 2,
+      pos.y + upVec.y * 2,
+      pos.z + -upVec.z * 2
+    )
+
+    this.bombShellDisplayEntities += spawnDebugDisplay(server, pos, debugEnd)
   }
 
-  fun tick() {
-    if (bombShellDisplayEntities.isEmpty()) {
+  fun tick(server: ServerWorld) {
+    if (this.bombShellDisplayEntities.isEmpty()) {
       return
     }
 
     // TODO: make this only repeat ticksUntilImpact times
 
-    for (displayEntity in bombShellDisplayEntities) {
-      val upVec = rotToUpVec(rot)
+    for (displayEntity in this.bombShellDisplayEntities) {
+      val upVec = rotToUpVec(this.rot, server)
 
       val newPos = Vec3d(
         upVec.x * speed,
-        upVec.y * speed,
+        upVec.y * -speed,
         upVec.z * speed
       )
 
-      val nbt = NbtCompound().apply {
-        displayEntity.writeNbt(this)
-      }
 
-      val transformationNbt = nbt.getCompound("transformation")
-      val translationList = transformationNbt.getList("translation", NbtElement.FLOAT_TYPE.toInt())
+      writeNbt(displayEntity, newPos)
 
-      val currentPos = Vector3f(
-        translationList.getFloat(0),
-        translationList.getFloat(1),
-        translationList.getFloat(2)
-      )
-
-      val offsetList = NbtList().apply {
-        add(NbtFloat.of(currentPos.x + newPos.x.toFloat()))
-        add(NbtFloat.of(currentPos.y + newPos.y.toFloat()))
-        add(NbtFloat.of(currentPos.z + newPos.z.toFloat()))
-      }
-
-      transformationNbt.put("translation", offsetList)
-      nbt.put("transformation", transformationNbt)
-      displayEntity.readNbt(nbt)
-
-      println("upVec: $upVec    rot: $rot    currentPos: $currentPos    newPos: $newPos")
+      // println("upVec: $upVec    rot: ${this.rot}    currentPos: $currentPos    newPos: $newPos")
     }
   }
 
+
+  fun writeNbt(displayEntity: DisplayEntity, newPos: Vec3d) {
+    val nbt = NbtCompound().apply {
+      displayEntity.writeNbt(this)
+    }
+
+    val transformationNbt = nbt.getCompound("transformation")
+    val translationList = transformationNbt.getList("translation", NbtElement.FLOAT_TYPE.toInt())
+
+    val currentPos = Vector3f(
+      translationList.getFloat(0),
+      translationList.getFloat(1),
+      translationList.getFloat(2)
+    )
+
+    val offsetList = NbtList().apply {
+      add(NbtFloat.of(currentPos.x + newPos.x.toFloat()))
+      add(NbtFloat.of(currentPos.y + newPos.y.toFloat()))
+      add(NbtFloat.of(currentPos.z + newPos.z.toFloat()))
+    }
+
+    transformationNbt.put("translation", offsetList)
+    nbt.put("transformation", transformationNbt)
+    displayEntity.readNbt(nbt)
+  }
+
+
   fun isAlive() : Boolean {
-    for (displayEntity in bombShellDisplayEntities) {
+    for (displayEntity in this.bombShellDisplayEntities) {
       if (!displayEntity.isAlive) {
 
-        for (displayEntity2 in bombShellDisplayEntities) {
+        for (displayEntity2 in this.bombShellDisplayEntities) {
           try {
             displayEntity2.kill()
           }
@@ -137,13 +154,30 @@ class BombShell {
           }
         }
 
-        println("ENTITY NOT ALIVE")
         return false
       }
     }
 
-    println("ENTITY ALIVE")
-
     return true
+  }
+
+
+  fun rotToUpVec(rotDegrees: Vector2d, server: ServerWorld): Vec3d {
+    val radians = Vector2d(
+      Math.toRadians(rotDegrees.x),
+      Math.toRadians(rotDegrees.y)
+    )
+
+    /*
+    val upVec = Vec3d(
+      sin(radians.y),
+      cos(radians.x),
+      cos(radians.y) * sin(radians.x)
+    )
+    */
+
+    val upVec = getUpVecByEquationIndex(server.gameRules.getInt(BDAT_gamerules?.upVecEquationIndex), radians)
+
+    return upVec.normalize()
   }
 }

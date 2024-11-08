@@ -6,7 +6,7 @@ import net.minecraft.server.command.CommandManager
 import net.minecraft.server.command.ServerCommandSource
 import net.minecraft.text.Text
 
-object config500Kg {
+object Config500Kg {
   fun register(dispatcher: CommandDispatcher<ServerCommandSource>) {
     dispatcher.register(
       CommandManager.literal("config500Kg")

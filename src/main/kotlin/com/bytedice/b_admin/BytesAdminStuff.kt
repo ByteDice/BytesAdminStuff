@@ -20,24 +20,26 @@ import net.minecraft.util.hit.HitResult
 import net.minecraft.util.math.Vec3d
 import net.minecraft.world.RaycastContext
 import net.minecraft.world.World
-import org.joml.Vector2d
 import org.joml.Vector2f
 import org.joml.Vector3f
 import org.joml.Vector4f
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.asin
+import kotlin.math.atan2
 
 
 // TODO: fix bomb movement direction
 
 
 var allBombs: Array<BombShell> = emptyArray()
+var BDAT_gamerules: gameRules? = null
+
 
 class BytesAdminStuff : DedicatedServerModInitializer {
   override fun onInitializeServer() {
+    BDAT_gamerules = gameRules()
 
-    ServerTickEvents.START_SERVER_TICK.register { _ ->
-      tick()
+    ServerTickEvents.START_SERVER_TICK.register { server ->
+      tick(server.overworld)
     }
 
     CommandRegistrationCallback.EVENT.register { dispatcher, _, _ ->
@@ -53,6 +55,27 @@ class BytesAdminStuff : DedicatedServerModInitializer {
       server.playerManager.broadcast(Text.of("BDAT - Loaded"), false)
       print("BDAT - Loaded")
     })
+  }
+}
+
+
+fun tick(server: ServerWorld) {
+  for ((i, bomb) in allBombs.withIndex()) {
+
+    if (bomb.isAlive()) {
+      bomb.tick(server)
+    }
+    else {
+      val newBombs = allBombs.toMutableList()
+      try {
+        newBombs.removeAt(i)
+      }
+      catch (e: java.lang.IndexOutOfBoundsException) {
+        continue
+      }
+
+      allBombs = newBombs.toTypedArray()
+    }
   }
 }
 
@@ -136,44 +159,27 @@ fun raycastFromPlayer(player: ServerPlayerEntity, maxDistance: Double): HitResul
 }
 
 
-fun rotToUpVec(rotDegrees: Vector2d): Vec3d {
-  val radians = Vector2d(
-    Math.toRadians(rotDegrees.x),
-    Math.toRadians(rotDegrees.y)
-  )
-
-  val upVec = Vec3d(
-    -sin(radians.y),
-    cos(radians.x),
-    cos(radians.y) * sin(radians.x)
-  )
-
-  return upVec.normalize()
-}
-
-
 fun addBombToArray(bomb: BombShell) {
   allBombs += bomb
 }
 
 
-fun tick() {
-  for ((i, bomb) in allBombs.withIndex()) {
-    println("BOMB IS ALIVE? ${bomb.isAlive()}")
+fun spawnDebugDisplay(server: ServerWorld, start: Vec3d, end: Vec3d, width: Float = 0.3f, blockType: String = "minecraft:red_stained_glass") : BlockDisplayEntity {
+  val dir = end.subtract(start)
+  val dist = dir.length()
+  val scale = Vector3f(dist.toFloat(), width, width)
 
-    if (bomb.isAlive()) {
-      bomb.tick()
-    }
-    else {
-      val newBombs = allBombs.toMutableList()
-      try {
-        newBombs.removeAt(i)
-      }
-      catch (e: java.lang.IndexOutOfBoundsException) {
-        continue
-      }
+  val yaw = Math.toDegrees(atan2(dir.z, dir.x)).toFloat()
+  val pitch = Math.toDegrees(asin(dir.y / dist)).toFloat()
 
-      allBombs = newBombs.toTypedArray()
-    }
-  }
+  val displayProperties = DisplayEntityProperties(
+    Vector3f(0.0f, 0.0f, 0.0f),
+    Vector4f(0.0f, 0.0f, 0.0f, 1.0f),
+    scale,
+    blockType
+  )
+
+  println("pos: $start    scale: $scale")
+
+  return spawnBlockDisplay(server, start, Vector2f(yaw, pitch), displayProperties)
 }

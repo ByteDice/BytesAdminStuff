@@ -3,7 +3,7 @@ package com.bytedice.b_admin
 import net.minecraft.entity.decoration.DisplayEntity
 import net.minecraft.util.math.Vec3d
 
-class explosionRing {
+class ExplosionRing {
   fun spawn(center: Vec3d, amount: Int) {
 
   }
